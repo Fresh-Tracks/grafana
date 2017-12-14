@@ -224,7 +224,13 @@ class MetricsPanelCtrl extends PanelCtrl {
       rangeRaw: this.range.raw,
       interval: this.interval,
       intervalMs: this.intervalMs,
-      targets: this.panel.targets,
+      targets: this.panel.targets.map(function(curr, i, array) {
+        const target = _.cloneDeep(curr);
+        if (Window.hasOwnProperty('current_hierarchy') && curr.expr.match(/__ft_hierarchy__/)) {
+          target.expr = target.expr.replace(/__ft_hierarchy__/, Window.current_hierarchy);
+        }
+        return target;
+      }),
       maxDataPoints: this.resolution,
       scopedVars: scopedVars,
       cacheTimeout: this.panel.cacheTimeout
