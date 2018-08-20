@@ -156,74 +156,13 @@ jobs:
       - store_artifacts:
           path: dist
 
-  build-enterprise:
-    docker:
-     - image: grafana/build-container:v0.1
-    working_directory: /go/src/github.com/grafana/grafana
-    steps:
-      - checkout
-      - run:
-          name: build and package grafana
-          command: './scripts/build/build_enterprise.sh'
-      - run:
-          name: sign packages
-          command: './scripts/build/sign_packages.sh'
-      - run:
-          name: sha-sum packages
-          command: 'go run build.go sha-dist'
-
-  deploy-master:
-    docker:
-      - image: circleci/python:2.7-stretch
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: install awscli
-          command: 'sudo pip install awscli'
-      - run:
-          name: deploy to s3
-          command: |
-            # Also
-            cp dist/grafana-latest.linux-x64.tar.gz dist/grafana-master-$(echo "${CIRCLE_SHA1}" | cut -b1-7).linux-x64.tar.gz
-            aws s3 sync ./dist s3://$BUCKET_NAME/master
-      - run:
-          name: Trigger Windows build
-          command: './scripts/trigger_windows_build.sh ${APPVEYOR_TOKEN} ${CIRCLE_SHA1} master'
-      - run:
-          name: Trigger Docker build
-          command: './scripts/trigger_docker_build.sh ${TRIGGER_GRAFANA_PACKER_CIRCLECI_TOKEN} master-$(echo "${CIRCLE_SHA1}" | cut -b1-7)'
-      - run:
-          name: Publish to Grafana.com
-          command: |
-            rm dist/grafana-master-$(echo "${CIRCLE_SHA1}" | cut -b1-7).linux-x64.tar.gz
-            ./scripts/publish -apiKey ${GRAFANA_COM_API_KEY}
-
-  deploy-release:
-    docker:
-      - image: circleci/python:2.7-stretch
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: install awscli
-          command: 'sudo pip install awscli'
-      - run:
-          name: deploy to s3
-          command: 'aws s3 sync ./dist s3://$BUCKET_NAME/release'
-      - run:
-          name: Trigger Windows build
-          command: './scripts/trigger_windows_build.sh ${APPVEYOR_TOKEN} ${CIRCLE_SHA1} release'
-      - run:
-          name: Trigger Docker build
-          command: './scripts/trigger_docker_build.sh ${TRIGGER_GRAFANA_PACKER_CIRCLECI_TOKEN} ${CIRCLE_TAG}'
 
 workflows:
   version: 2
   test-and-build:
     jobs:
       - build-all:
-          filters: *filter-not-release
+          filters: *filter-only-master
       - codespell:
           filters: *filter-not-release
       - gometalinter:
@@ -235,8 +174,8 @@ workflows:
       - mysql-integration-test:
           filters: *filter-not-release
       - postgres-integration-test:
-          filters: *filter-not-release
-      - deploy-master:
+          filters: *filter-only-master
+      - grafana-docker-master:
           requires:
             - build-all
             - test-backend
@@ -245,32 +184,31 @@ workflows:
             - gometalinter
             - mysql-integration-test
             - postgres-integration-test
-          filters:
-           branches:
-             only: master
-  release:
-    jobs:
-      - build-all:
-          filters: *filter-only-release
-      - codespell:
-          filters: *filter-only-release
-      - gometalinter:
-          filters: *filter-only-release
-      - test-frontend:
-          filters: *filter-only-release
-      - test-backend:
-          filters: *filter-only-release
-      - mysql-integration-test:
-          filters: *filter-only-release
-      - postgres-integration-test:
-          filters: *filter-only-release
-      - deploy-release:
-          requires:
-            - build-all
-            - test-backend
-            - test-frontend
-            - codespell
-            - gometalinter
-            - mysql-integration-test
-            - postgres-integration-test
-          filters: *filter-only-release
+          filters: *filter-only-master
+
+  build-branches-and-prs:
+      jobs:
+        - build:
+            filters: *filter-not-release-or-master
+        - codespell:
+            filters: *filter-not-release-or-master
+        - gometalinter:
+            filters: *filter-not-release-or-master
+        - test-frontend:
+            filters: *filter-not-release-or-master
+        - test-backend:
+            filters: *filter-not-release-or-master
+        - mysql-integration-test:
+            filters: *filter-not-release-or-master
+        - postgres-integration-test:
+            filters: *filter-not-release-or-master
+        - grafana-docker-pr:
+            requires:
+              - build
+              - test-backend
+              - test-frontend
+              - codespell
+              - gometalinter
+              - mysql-integration-test
+              - postgres-integration-test
+            filters: *filter-not-release-or-master
