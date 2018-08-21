@@ -156,12 +156,44 @@ jobs:
       - store_artifacts:
           path: dist
 
+  freshtracks-image-registry:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: |
+          echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
+          gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+          gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+          gcloud auth configure-docker
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run: echo "building gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${CIRCLE_SHA1}"
+      - run: docker build --tag grafana --no-cache=true .
+      - run: docker tag grafana gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${CIRCLE_SHA1}
+      - run: docker images
+      - run: docker push gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${CIRCLE_SHA1}
+
+  test-job:
+      docker:
+        - image: google/cloud-sdk
+      steps:
+        - checkout
+        - attach_workspace:
+            at: .
+        - run: echo "${CIRCLE_SHA1}"
+        - run: echo "$CIRCLE_SHA1"
 
 workflows:
   version: 2
+
   build-branches-and-prs:
       jobs:
         - build:
+            filters: *filter-not-release-or-master
+        - test-job:
             filters: *filter-not-release-or-master
         - codespell:
             filters: *filter-not-release-or-master
@@ -175,7 +207,7 @@ workflows:
             filters: *filter-not-release-or-master
         - postgres-integration-test:
             filters: *filter-not-release-or-master
-        - grafana-docker-pr:
+        - freshtracks-image-registry:
             requires:
               - build
               - test-backend
