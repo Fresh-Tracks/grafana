@@ -136,36 +136,42 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - run: |
-          echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
-          gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
-          gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-          gcloud auth configure-docker
       - setup_remote_docker:
           docker_layer_caching: true
-      - run: echo "building gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${CIRCLE_SHA1}"
-      - run: docker build --tag grafana --no-cache=true .
-      - run: docker tag grafana gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${CIRCLE_SHA1}
-      - run: docker images
-      - run: docker push gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${CIRCLE_SHA1}
+      - run: echo 'export SHORT_SHA=${CIRCLE_SHA1:0:7}' >> $BASH_ENV
+      - run:
+          name: Authenticate to GCR
+          command: |
+            echo $GCLOUD_SERVICE_KEY | base64 --decode > ${HOME}/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+            gcloud auth configure-docker
+      - run:
+          name: Build release image
+          command: docker build --tag grafana --no-cache=true .
+      - run:
+          name: Tag and push to GCR
+          command: |
+            docker tag grafana gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${SHORT_SHA}
+            docker push gcr.io/${GOOGLE_PROJECT_ID}/grafana:base-${SHORT_SHA}
 
 workflows:
   version: 2
   build-branches-and-prs:
-      jobs:
-        - build:
-        - codespell:
-        - gometalinter:
-        - test-frontend:
-        - test-backend:
-        - mysql-integration-test:
-        - postgres-integration-test:
-        - freshtracks-image-registry:
-            requires:
-              - build
-              - test-backend
-              - test-frontend
-              - codespell
-              - gometalinter
-              - mysql-integration-test
-              - postgres-integration-test
+    jobs:
+      - build
+      - codespell
+      - gometalinter
+      - test-frontend
+      - test-backend
+      - mysql-integration-test
+      - postgres-integration-test
+      - freshtracks-image-registry:
+          requires:
+            - build
+            - test-backend
+            - test-frontend
+            - codespell
+            - gometalinter
+            - mysql-integration-test
+            - postgres-integration-test
