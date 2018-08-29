@@ -18,6 +18,15 @@ If you have any problems please read the [troubleshooting guide](http://docs.gra
 ## Documentation & Support
 Be sure to read the [getting started guide](http://docs.grafana.org/guides/gettingstarted/) and the other feature guides.
 
+## Using docker image for local FreshTracks development
+
+```bash
+docker build -t grafana:dev --build-arg GF_UID=`id -u` --build-arg GF_GID=`id -u` .
+docker run -v `pwd`/public:/usr/share/grafana/public -e grafana:dev
+yarn watch
+```
+To use the docker image for local development, you have to ensure that it builds with grafana as the same UID as your local user. Then you can mount the public directory to build frontend assets. After yarn rebuilds files, you'll have to restart the container to reload grafana.
+
 ## Run from master
 If you want to build a package yourself, or contribute - Here is a guide for how to do that. You can always find
 the latest master builds [here](https://grafana.com/grafana/download)
