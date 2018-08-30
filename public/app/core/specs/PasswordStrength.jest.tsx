@@ -5,18 +5,23 @@ import {PasswordStrength} from '../components/PasswordStrength';
 
 describe('PasswordStrength', () => {
 
-  it('should have class bad if length below 4', () => {
-    const wrapper = shallow(<PasswordStrength password="asd" />);
+  it('should have class bad if length below 8', () => {
+    const wrapper = shallow(<PasswordStrength password="asAD12$" />);
     expect(wrapper.find(".password-strength-bad")).toHaveLength(1);
   });
 
-  it('should have class ok if length below 8', () => {
-    const wrapper = shallow(<PasswordStrength password="asdasd" />);
+  it('should have class bad if only 2/4 requirements met', () => {
+    const wrapper = shallow(<PasswordStrength password="aaaafsdfkls323232" />);
+    expect(wrapper.find(".password-strength-bad")).toHaveLength(1);
+  });
+
+  it('should have class ok if has 3/4 requirements', () => {
+    const wrapper = shallow(<PasswordStrength password="aaaAAA#$" />);
     expect(wrapper.find(".password-strength-ok")).toHaveLength(1);
   });
 
-  it('should have class good if length above 8', () => {
-    const wrapper = shallow(<PasswordStrength password="asdaasdda" />);
+  it('should have class good if has 4/4 requirements', () => {
+    const wrapper = shallow(<PasswordStrength password="aaAA11&*" />);
     expect(wrapper.find(".password-strength-good")).toHaveLength(1);
   });
 
