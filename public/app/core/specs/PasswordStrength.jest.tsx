@@ -15,12 +15,12 @@ describe('PasswordStrength', () => {
     expect(wrapper.find(".password-strength-bad")).toHaveLength(1);
   });
 
-  it('should have class ok if has 3/4 requirements', () => {
+  it('should have class good if it has 3/4 requirements', () => {
     const wrapper = shallow(<PasswordStrength password="aaaAAA#$" />);
-    expect(wrapper.find(".password-strength-ok")).toHaveLength(1);
+    expect(wrapper.find(".password-strength-good")).toHaveLength(1);
   });
 
-  it('should have class good if has 4/4 requirements', () => {
+  it('should have class good if it has 4/4 requirements', () => {
     const wrapper = shallow(<PasswordStrength password="aaAA11&*" />);
     expect(wrapper.find(".password-strength-good")).toHaveLength(1);
   });

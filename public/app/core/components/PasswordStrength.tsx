@@ -38,7 +38,7 @@ export class PasswordStrength extends React.Component<IProps, any> {
 
   render() {
     const { password } = this.props;
-    let strengthText = "strength: strong like a bull.";
+    let strengthText = "Password meets requirements.";
     let strengthClass = "password-strength-good";
 
     if (!password) {
@@ -47,13 +47,9 @@ export class PasswordStrength extends React.Component<IProps, any> {
 
     const count = this.requirementCount(password);
 
-    if (count < 4) {
-      strengthText = "strength: you can do better.";
-      strengthClass = "password-strength-ok";
-    }
-
     if (password.length < 8 || count < 3) {
-      strengthText = "strength: weak sauce.";
+      strengthText = "Password must be at least 8 characters long, and contain 3 out of 4 of: " +
+        "lowercase letter, uppercase letter, number, symbol.";
       strengthClass = "password-strength-bad";
     }
 
